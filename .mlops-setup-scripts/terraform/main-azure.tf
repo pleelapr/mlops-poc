@@ -3,7 +3,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "=3.0.1"
+      version = ">=3.0.1"
     }
   }
 }
@@ -18,9 +18,15 @@ resource "azurerm_resource_group" "tfstate" {
   location = var.azure_resource_group_location
 }
 
+resource "random_string" "random_suffix" {
+  length  = 5
+  special = false
+  upper   = false
+}
+
 resource "azurerm_storage_account" "tfstate" {
   // Azure resource names can be at most 24 characters
-  name                            = substr("mlopspoc", 0, 24)
+  name                            = "${azurerm_resource_group.tfstate.name}${random_string.random_suffix.result}"
   resource_group_name             = azurerm_resource_group.tfstate.name
   location                        = azurerm_resource_group.tfstate.location
   account_tier                    = "Standard"
@@ -43,4 +49,9 @@ resource "azurerm_storage_container" "cicd-setup-tfstate" {
 output "ARM_ACCESS_KEY" {
   value     = azurerm_storage_account.tfstate.primary_access_key
   sensitive = true
+}
+
+output "azurerm_storage_account_name" {
+  value     = "${azurerm_resource_group.tfstate.name}${random_string.random_suffix.result}"
+  sensitive = false
 }
