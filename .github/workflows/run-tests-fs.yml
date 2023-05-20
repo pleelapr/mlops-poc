@@ -3,12 +3,11 @@ on:
   workflow_dispatch:
   pull_request:
     paths-ignore:
-      - 'mlops-poc/terraform/**'
+      - "mlops-poc/terraform/**"
 
 env:
   DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
   NODE_TYPE_ID: Standard_D3_v2
-  
 
 concurrency: mlops-poc-feature-training-integration-test-staging
 
@@ -23,30 +22,34 @@ jobs:
       # Feature store tests bring up a local Spark session, so Java is required.
       - uses: actions/setup-java@v2
         with:
-          distribution: 'temurin'
-          java-version: '11'
+          distribution: "temurin"
+          java-version: "11"
       - name: Install dependencies
         run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install -r test-requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r test-requirements.txt
       - name: Run tests with pytest
         run: |
-            cd mlops-poc
-            pytest
-            cd ..
-  
+          cd mlops-poc
+          pytest
+          cd ..
+
   integration_test:
     needs: unit_tests
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: Generate AAD Token
-        run: ./.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
+      - name: Log in with Azure
+        uses: azure/login@v1
+        with:
+          creds: "${{ secrets.AZURE_CREDENTIALS }}"
+      # - name: Generate AAD Token
+      #   run: ./.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
       # This step populates a JSON Databricks job payload that will be submitted as an integration test run.
       # It currently builds a one-off multi-task job that contains feature engineering tasks to populate Feature
-      # Store tables, and a training task that uses those tables. 
+      # Store tables, and a training task that uses those tables.
       # You will need to modify the contents below to fit your pipelines (both # of tasks and input parameters for each
       # task).
       - name: Build JSON job payload for integration test
@@ -159,7 +162,7 @@ jobs:
               }
             ]
             }`
-            return output.replace(/\r?\n|\r/g, '')    
+            return output.replace(/\r?\n|\r/g, '')
       - name: Feature Store/Model Training Integration Test
         id: features-training-integration-test
         run: |
