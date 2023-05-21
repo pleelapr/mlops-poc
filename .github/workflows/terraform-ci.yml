@@ -17,6 +17,7 @@ defaults:
 # Code reference can be found at https://github.com/hashicorp/setup-terraform
 jobs:
   staging:
+    permissions: write-all
     concurrency: mlops-poc-staging-terraform-job
     runs-on: ubuntu-20.04
     env:
@@ -111,6 +112,7 @@ jobs:
               body: output
             })
   prod:
+    permissions: write-all
     concurrency: mlops-poc-prod-terraform-job
     runs-on: ubuntu-20.04
     env:
