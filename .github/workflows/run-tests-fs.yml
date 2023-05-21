@@ -174,7 +174,9 @@ jobs:
       - name: Feature Store/Model Training Integration Test
         id: features-training-integration-test
         run: |
-          python -m pip install --upgrade pip databricks-cli
+          pip uninstall urllib3    
+          pip uninstall chardet
+          pip install databricks-cli
           databricks jobs configure
           echo ${{steps.integration-test-content.outputs.result}} > test.json 
           databricks runs submit --json-file test.json --wait > tmp-output.json
