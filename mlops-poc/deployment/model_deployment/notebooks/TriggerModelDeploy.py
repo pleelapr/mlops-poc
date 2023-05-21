@@ -38,7 +38,7 @@ assert env != "None", "env notebook parameter must be specified"
 assert model_uri != "", "model_uri notebook parameter must be specified"
 
 github_repo = dbutils.secrets.get(
-    f"{env}-mlops-poc-cd-credentials", "github_repo"
+    f"{env}-mlops-poc-cd-credentials", "github-repo"
 )
 token = dbutils.secrets.get(
     f"{env}-mlops-poc-cd-credentials", "token"
