@@ -22,3 +22,7 @@ terraform {
     }
   }
 }
+
+provider "databricks" {
+  alias = "prod"
+}

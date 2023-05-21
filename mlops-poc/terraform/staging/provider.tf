@@ -19,3 +19,7 @@ terraform {
     }
   }
 }
+
+provider "databricks" {
+  alias = "staging_sp"
+}
