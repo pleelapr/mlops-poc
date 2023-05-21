@@ -43,12 +43,12 @@ jobs:
         uses: actions/checkout@v3
       - name: GET Databricks ADD Token
         run: |
-          curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+          echo "DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
           "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
           -d "client_id=${{ secrets.stagingAzureSpApplicationId }}" \
           -d 'grant_type=client_credentials' \
           -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
-          -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}"
+          -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')" >> $GITHUB_ENV
 
       # - name: read workspace id
       #   id: workspace
@@ -176,8 +176,7 @@ jobs:
       - name: Feature Store/Model Training Integration Test
         id: features-training-integration-test
         run: |
-          databricks configure --profile STAGING
-          databricks jobs configure
+          databricks jobs configure --version=2.1
           echo ${{steps.integration-test-content.outputs.result}} > test.json 
           databricks runs submit --json-file test.json --wait > tmp-output.json
           # We want to extract the run id as it's useful to show in the Github UI (as a comment).
