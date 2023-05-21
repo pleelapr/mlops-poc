@@ -6,9 +6,8 @@ on:
       - "mlops-poc/terraform/**"
 
 env:
-  # DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
-  DBX_HOST: https://adb-1778171230779412.12.azuredatabricks.net
-  # DATABRICKS_JOBS_API_VERSION: 2.1
+  DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
+  DATABRICKS_JOBS_API_VERSION: 2.1
   NODE_TYPE_ID: Standard_D3_v2
 
 concurrency: mlops-poc-feature-training-integration-test-staging
@@ -51,7 +50,7 @@ jobs:
                                               -d 'grant_type=client_credentials' \
                                               -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
                                               -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')
-          echo "DBX_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
+          echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
 
       # - name: read workspace id
       #   id: workspace
