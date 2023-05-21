@@ -25,7 +25,10 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-8569209645075352.12.azuredatabricks.net
-
+      ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+      ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+      ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v3
       - name: GET Databricks AAD Token
@@ -37,12 +40,6 @@ jobs:
                                               -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
                                               -d "client_secret=${{ secrets.prodAzureSpClientSecret }}" |  jq -r  '.access_token')
           echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
-      - name: "Az CLI login"
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.prodAzureSpApplicationId }}
-          tenant-id: ${{ secrets.prodAzureSpTenantId }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
