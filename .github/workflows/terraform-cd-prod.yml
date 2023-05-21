@@ -10,6 +10,11 @@ on:
       - "mlops-poc/terraform/**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 defaults:
   run:
     working-directory: ./mlops-poc/terraform

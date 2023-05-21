@@ -8,6 +8,11 @@ on:
     paths:
       - "mlops-poc/terraform/**"
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 defaults:
   run:
     working-directory: ./mlops-poc/terraform
