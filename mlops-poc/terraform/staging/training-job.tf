@@ -68,13 +68,13 @@ resource "databricks_job" "model_training_job" {
         targets = "mean_squared_error"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns custom metrics.
         # TODO(optional): custom_metrics_loader_function
-        custom_metrics_loader_function = "custom_metrics"
+        custom_metrics_loader_function = "squared_diff_plus_one"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns model validation thresholds.
         # TODO(optional): validation_thresholds_loader_function
-        validation_thresholds_loader_function = "validation_thresholds"
+        validation_thresholds_loader_function = "mean_squared_error"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns evaluator_config.
         # TODO(optional): evaluator_config_loader_function
-        evaluator_config_loader_function = "evaluator_config"
+        # evaluator_config_loader_function = "evaluator_config"
       }
     }
 
