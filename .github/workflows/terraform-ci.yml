@@ -4,10 +4,12 @@ name: Terraform Tests for mlops-poc
 
 on:
   workflow_dispatch:
-  pull_request_target:
+  # pull_request_target:
+  #   paths:
+  #     - "mlops-poc/terraform/**"
+  pull_request:
     paths:
       - "mlops-poc/terraform/**"
-  pull_request:
 
 permissions: write-all
 
