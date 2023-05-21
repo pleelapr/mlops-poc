@@ -100,8 +100,15 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Generate AAD Token
-        run: ../../.github/workflows/scripts/generate-aad-token.sh ${{ secrets.prodAzureSpTenantId }} ${{ secrets.prodAzureSpApplicationId }} ${{ secrets.prodAzureSpClientSecret }}
+      - name: GET Databricks AAD Token
+        run: |
+          DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+                                              "https://login.microsoftonline.com/${{ secrets.prodAzureSpTenantId }}/oauth2/v2.0/token" \
+                                              -d "client_id=${{ secrets.prodAzureSpApplicationId }}" \
+                                              -d 'grant_type=client_credentials' \
+                                              -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+                                              -d "client_secret=${{ secrets.prodAzureSpClientSecret }}" |  jq -r  '.access_token')
+          echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
