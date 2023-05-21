@@ -1,0 +1,27 @@
+{
+  "mlops-poc_batch_inference_job_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "864425947831982"
+  },
+  "mlops-poc_experiment_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "1854266653784488"
+  },
+  "mlops-poc_experiment_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "/mlops-poc-prod/prod-mlops-poc-experiment"
+  },
+  "mlops-poc_model_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "prod-mlops-poc-model"
+  },
+  "mlops-poc_training_job_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "187915790916156"
+  }
+}
