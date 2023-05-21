@@ -23,8 +23,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      # - name: Generate AAD Token
-      #   run: ../../.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
       - name: GET Databricks ADD Token
         run: |
           DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
