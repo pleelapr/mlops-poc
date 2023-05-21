@@ -23,9 +23,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      # - name: Generate AAD Token
-      #   run: ../../.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
-      - name: GET Databricks ADD Token
+      - name: GET Databricks AAD Token
         run: |
           DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
                                               "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
