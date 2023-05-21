@@ -171,10 +171,11 @@ jobs:
             ]
             }`
             return output.replace(/\r?\n|\r/g, '')
+      - name: install-databricks-cli
+        uses: microsoft/install-databricks-cli@v1.0.0
       - name: Feature Store/Model Training Integration Test
         id: features-training-integration-test
         run: |
-          pip install databricks-cli
           databricks jobs configure
           echo ${{steps.integration-test-content.outputs.result}} > test.json 
           databricks runs submit --json-file test.json --wait > tmp-output.json
