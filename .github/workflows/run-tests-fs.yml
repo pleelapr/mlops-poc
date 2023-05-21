@@ -176,7 +176,7 @@ jobs:
         run: |
           pip install databricks-cli
           pip uninstall --yes urllib3
-          pip install urllib3==2.0.0
+          pip install --upgrade requests
           databricks jobs configure
           echo ${{steps.integration-test-content.outputs.result}} > test.json 
           databricks runs submit --json-file test.json --wait > tmp-output.json
