@@ -176,7 +176,7 @@ jobs:
       - name: Feature Store/Model Training Integration Test
         id: features-training-integration-test
         run: |
-          databricks fs ls --profile STAGING
+          databricks configure --profile STAGING
           databricks jobs configure
           echo ${{steps.integration-test-content.outputs.result}} > test.json 
           databricks runs submit --json-file test.json --wait > tmp-output.json
