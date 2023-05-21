@@ -41,10 +41,18 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: Log in with Azure
-        uses: azure/login@v1
-        with:
-          creds: "${{ secrets.AZURE_CREDENTIALS }}"
+      - name: GET Databricks ADD Token
+        run: |
+          curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+          "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
+          -d "client_id=${{ secrets.stagingAzureSpApplicationId }}" \
+          -d 'grant_type=client_credentials' \
+          -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+          -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}"
+
+      # - name: read workspace id
+      #   id: workspace
+      #   run: echo "::set-output name=id::$(cat workspaces.json | jq -c '.workspaces[] | select(.name == "My Workspace").id')"
       # - name: Generate AAD Token
       #   run: ./.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
       # This step populates a JSON Databricks job payload that will be submitted as an integration test run.
