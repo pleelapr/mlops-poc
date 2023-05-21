@@ -178,12 +178,14 @@ jobs:
         run: pip install databricks-cli
       - name: Set databricks jobs
         run: databricks jobs configure --version=2.1
+      - name: get test.json file
+        run: echo ${{steps.integration-test-content.outputs.result}} > test.json
       - name: Feature Store/Model Training Integration Test
         id: features-training-integration-test
+        run: databricks runs submit --json-file test.json --wait > tmp-output.json
+        # We want to extract the run id as it's useful to show in the Github UI (as a comment).
+      - name: extract run id
         run: |
-          echo ${{steps.integration-test-content.outputs.result}} > test.json 
-          databricks runs submit --json-file test.json --wait > tmp-output.json
-          # We want to extract the run id as it's useful to show in the Github UI (as a comment).
           head -3  tmp-output.json  | jq '.run_id'  > run-id.json
           databricks runs get --run-id "$(cat run-id.json)" | jq -r '.run_page_url' > run-page-url.json
           echo "run-url=$(cat run-page-url.json)" >> "$GITHUB_OUTPUT"
