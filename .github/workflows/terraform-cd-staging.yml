@@ -25,10 +25,10 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
-      # ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
-      # ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}s
-      # ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
-      # ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+      ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}s
+      ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - uses: actions/checkout@v3
