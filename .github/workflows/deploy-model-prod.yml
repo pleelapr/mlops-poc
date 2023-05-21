@@ -27,7 +27,7 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: GET Databricks ADD Token
+      - name: GET Databricks AAD Token
         run: |
           DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
                                               "https://login.microsoftonline.com/${{ secrets.prodAzureSpTenantId }}/oauth2/v2.0/token" \
