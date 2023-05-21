@@ -25,10 +25,6 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-8569209645075352.12.azuredatabricks.net
-      ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
-      ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
-      ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v3
       - name: GET Databricks AAD Token
@@ -46,6 +42,11 @@ jobs:
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod fmt -check
         continue-on-error: true
       - name: Configure Terraform state backend authentication
@@ -53,9 +54,19 @@ jobs:
           echo "ARM_ACCESS_KEY=${{secrets.ARM_ACCESS_KEY}}" >> "$GITHUB_ENV"
       - name: Terraform Init
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod init
       - name: Terraform Validate
         id: validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod validate
       - name: Terraform Plan
         id: plan

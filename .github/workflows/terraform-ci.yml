@@ -24,10 +24,6 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
-      ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
-      ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
-      ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -47,6 +43,11 @@ jobs:
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform fmt -check -recursive -diff
         continue-on-error: true
       - name: Configure Terraform state backend authentication
@@ -58,9 +59,19 @@ jobs:
           echo "ARM_ACCESS_KEY=${{secrets.ARM_ACCESS_KEY}}" >> "$GITHUB_ENV"
       - name: Terraform Init
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=staging init
       - name: Terraform Validate
         id: validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=staging validate -no-color
       - name: Terraform Plan
         id: plan
@@ -107,10 +118,10 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-8569209645075352.12.azuredatabricks.net
-      ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
-      ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
-      ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      # ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+      # ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+      # ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+      # ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -130,6 +141,11 @@ jobs:
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform fmt -check -recursive -diff
         continue-on-error: true
       - name: Configure Terraform state backend authentication
@@ -137,9 +153,19 @@ jobs:
           echo "ARM_ACCESS_KEY=${{secrets.ARM_ACCESS_KEY}}" >> "$GITHUB_ENV"
       - name: Terraform Init
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod init
       - name: Terraform Validate
         id: validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod validate -no-color
       - name: Terraform Plan
         id: plan
