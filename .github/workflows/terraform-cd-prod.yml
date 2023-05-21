@@ -10,6 +10,11 @@ on:
       - "mlops-poc/terraform/**"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 defaults:
   run:
     working-directory: ./mlops-poc/terraform
@@ -20,10 +25,9 @@ jobs:
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-8569209645075352.12.azuredatabricks.net
-
     steps:
       - uses: actions/checkout@v3
-      - name: GET Databricks ADD Token
+      - name: GET Databricks AAD Token
         run: |
           DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
                                               "https://login.microsoftonline.com/${{ secrets.prodAzureSpTenantId }}/oauth2/v2.0/token" \
@@ -32,11 +36,17 @@ jobs:
                                               -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
                                               -d "client_secret=${{ secrets.prodAzureSpClientSecret }}" |  jq -r  '.access_token')
           echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
-      # - name: Generate AAD Token
-      #   run: ../../.github/workflows/scripts/generate-aad-token.sh ${{ secrets.prodAzureSpTenantId }} ${{ secrets.prodAzureSpApplicationId }} ${{ secrets.prodAzureSpClientSecret }}
+      - name: AZ Login
+        run: |
+          az login --service-principal -u ${{ secrets.prodAzureSpApplicationId }} -p ${{ secrets.prodAzureSpClientSecret }} --tenant ${{ secrets.prodAzureSpTenantId }}
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod fmt -check
         continue-on-error: true
       - name: Configure Terraform state backend authentication
@@ -44,9 +54,19 @@ jobs:
           echo "ARM_ACCESS_KEY=${{secrets.ARM_ACCESS_KEY}}" >> "$GITHUB_ENV"
       - name: Terraform Init
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod init
       - name: Terraform Validate
         id: validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod validate
       - name: Terraform Plan
         id: plan

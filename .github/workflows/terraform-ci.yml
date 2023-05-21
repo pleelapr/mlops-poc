@@ -4,9 +4,14 @@ name: Terraform Tests for mlops-poc
 
 on:
   workflow_dispatch:
-  pull_request_target:
+  # pull_request_target:
+  #   paths:
+  #     - "mlops-poc/terraform/**"
+  pull_request:
     paths:
-      - 'mlops-poc/terraform/**'
+      - "mlops-poc/terraform/**"
+
+permissions: write-all
 
 defaults:
   run:
@@ -15,6 +20,7 @@ defaults:
 # Code reference can be found at https://github.com/hashicorp/setup-terraform
 jobs:
   staging:
+    permissions: write-all
     concurrency: mlops-poc-staging-terraform-job
     runs-on: ubuntu-20.04
     env:
@@ -23,11 +29,26 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Generate AAD Token
-        run: ../../.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
+      - name: GET Databricks AAD Token
+        run: |
+          DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+                                              "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
+                                              -d "client_id=${{ secrets.stagingAzureSpApplicationId }}" \
+                                              -d 'grant_type=client_credentials' \
+                                              -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+                                              -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')
+          echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
+      - name: AZ Login
+        run: |
+          az login --service-principal -u ${{ secrets.stagingAzureSpApplicationId }} -p ${{ secrets.stagingAzureSpClientSecret }} --tenant ${{ secrets.stagingAzureSpTenantId }}
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform fmt -check -recursive -diff
         continue-on-error: true
       - name: Configure Terraform state backend authentication
@@ -39,9 +60,19 @@ jobs:
           echo "ARM_ACCESS_KEY=${{secrets.ARM_ACCESS_KEY}}" >> "$GITHUB_ENV"
       - name: Terraform Init
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=staging init
       - name: Terraform Validate
         id: validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.stagingAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.stagingAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.stagingAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=staging validate -no-color
       - name: Terraform Plan
         id: plan
@@ -84,20 +115,39 @@ jobs:
               body: output
             })
   prod:
+    permissions: write-all
     concurrency: mlops-poc-prod-terraform-job
     runs-on: ubuntu-20.04
     env:
       DATABRICKS_HOST: https://adb-8569209645075352.12.azuredatabricks.net
-      
+      # ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+      # ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+      # ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+      # ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Generate AAD Token
-        run: ../../.github/workflows/scripts/generate-aad-token.sh ${{ secrets.prodAzureSpTenantId }} ${{ secrets.prodAzureSpApplicationId }} ${{ secrets.prodAzureSpClientSecret }}
+      - name: GET Databricks AAD Token
+        run: |
+          DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+                                              "https://login.microsoftonline.com/${{ secrets.prodAzureSpTenantId }}/oauth2/v2.0/token" \
+                                              -d "client_id=${{ secrets.prodAzureSpApplicationId }}" \
+                                              -d 'grant_type=client_credentials' \
+                                              -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+                                              -d "client_secret=${{ secrets.prodAzureSpClientSecret }}" |  jq -r  '.access_token')
+          echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
+      - name: AZ Login
+        run: |
+          az login --service-principal -u ${{ secrets.prodAzureSpApplicationId }} -p ${{ secrets.prodAzureSpClientSecret }} --tenant ${{ secrets.prodAzureSpTenantId }}
       - uses: hashicorp/setup-terraform@v1
       - name: Terraform fmt
         id: fmt
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform fmt -check -recursive -diff
         continue-on-error: true
       - name: Configure Terraform state backend authentication
@@ -105,9 +155,19 @@ jobs:
           echo "ARM_ACCESS_KEY=${{secrets.ARM_ACCESS_KEY}}" >> "$GITHUB_ENV"
       - name: Terraform Init
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod init
       - name: Terraform Validate
         id: validate
+        env:
+          ARM_CLIENT_ID: ${{ secrets.prodAzureSpApplicationId }}
+          ARM_TENANT_ID: ${{ secrets.prodAzureSpTenantId }}
+          ARM_CLIENT_SECRET: ${{ secrets.prodAzureSpClientSecret }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform -chdir=prod validate -no-color
       - name: Terraform Plan
         id: plan
