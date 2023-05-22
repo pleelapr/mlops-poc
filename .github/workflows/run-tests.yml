@@ -1,0 +1,80 @@
+name: ML Code Tests for mlops-poc
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - "mlops-poc/terraform/**"
+
+env:
+  DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
+  NODE_TYPE_ID: Standard_D3_v2
+
+jobs:
+  unit_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r test-requirements.txt
+      - name: Run tests with pytest
+        run: |
+          cd mlops-poc
+          pytest
+          cd ..
+
+  integration_test:
+    needs: unit_tests
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Generate AAD Token
+        run: |
+          DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+          "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
+          -d "client_id=${{ secrets.stagingAzureSpApplicationId }}" \
+          -d 'grant_type=client_credentials' \
+          -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+          -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')
+          echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
+      - name: Train model
+        uses: databricks/run-notebook@v0
+        id: train
+        with:
+          local-notebook-path: mlops-poc/training/notebooks/Train.py
+          git-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+          git-provider: gitHub
+          new-cluster-json: >
+            {
+              "spark_version": "12.2.x-cpu-ml-scala2.12",
+              "node_type_id": "${{ env.NODE_TYPE_ID }}",
+              "num_workers": 0,
+              "spark_conf": {
+                "spark.databricks.cluster.profile": "singleNode",
+                "spark.master": "local[*, 4]"
+              },
+              "custom_tags": {
+                "ResourceClass": "SingleNode",
+                "clusterSource": "mlops-stack/0.0"
+              }
+            }
+          access-control-list-json: >
+            [
+              {
+                "group_name": "users",
+                "permission_level": "CAN_VIEW"
+              }
+            ]
+          run-name: mlops-poc Integration Test
+          notebook-params-json: >
+            {
+              "env": "test"
+            }
+
+          pr-comment-github-token: ${{ secrets.GITHUB_TOKEN }}
