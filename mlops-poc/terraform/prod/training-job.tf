@@ -20,8 +20,8 @@ resource "databricks_job" "model_training_job" {
         env = local.env
         # TODO: Update training_data_path
         # training_data_path = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
-        experiment_name = databricks_mlflow_experiment.experiment.name
-        model_name      = "${local.env_prefix}mlops-poc-model"
+        # experiment_name = databricks_mlflow_experiment.experiment.name
+        # model_name      = "${local.env_prefix}mlops-poc-model"
       }
     }
 
