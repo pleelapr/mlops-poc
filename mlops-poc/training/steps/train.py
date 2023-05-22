@@ -12,6 +12,7 @@ def estimator_fn():
     The estimator's input and output signatures should be compatible with scikit-learn
     estimators.
     """
-    from sklearn.linear_model import SGDRegressor
+    from sklearn.linear_model import SGDRegressor, LogisticRegression
 
-    return SGDRegressor(random_state=42)
+    # return SGDRegressor(random_state=42)
+    return LogisticRegression(penalty='elasticnet', random_state=42)
