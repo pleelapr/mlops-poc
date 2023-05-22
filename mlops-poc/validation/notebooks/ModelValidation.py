@@ -37,6 +37,7 @@
 # COMMAND ----------
 
 # MAGIC %pip install -r ../../../requirements.txt
+# MAGIC %pip install databricks-feature-store
 
 # COMMAND ----------
 
@@ -59,8 +60,6 @@ dbutils.widgets.text("model_name", "dev-mlops-poc-model", "Model Name")
 dbutils.widgets.text("model_version", "", "Candidate Model Version")
 
 # COMMAND ----------
-
-
 
 import sys
 
