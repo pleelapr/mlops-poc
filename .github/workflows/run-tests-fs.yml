@@ -1,4 +1,4 @@
-name: Feature and Training Integration Tests for mlops-poc
+name: Feature and Training Integration Tests for mlops-poc with Feature Store
 on:
   workflow_dispatch:
   pull_request:
@@ -51,7 +51,7 @@ jobs:
                                               -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
                                               -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')
           echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
-          echo "$DATABRICKS_TOKEN"
+                    echo "$DATABRICKS_TOKEN"
 
       # - name: read workspace id
       #   id: workspace
@@ -76,7 +76,7 @@ jobs:
               {
                 "task_key": "pickup-features",
                 "notebook_task": {
-                  "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures", 
+                  "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures",
                   "base_parameters": {
                     "input_table_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
                     "timestamp_column": "tpep_pickup_datetime",
@@ -103,7 +103,7 @@ jobs:
                 "task_key": "dropoff-features",
                 "notebook_task": {
                   "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures",
-                  "base_parameters": {                    
+                  "base_parameters": {
                     "input_table_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
                     "timestamp_column": "tpep_dropoff_datetime",
                     "output_table_name": "feature_store_taxi_example.trip_dropoff_features_test",
