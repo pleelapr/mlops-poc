@@ -54,7 +54,7 @@ resource "databricks_job" "model_training_job" {
         # `enabled`  : Run the model validation notebook. Move model to Production stage only if all model validation
         #               rules are passing.
         # TODO: update run_mode
-        run_mode = "disabled"
+        run_mode = "enabled"
         # Whether to load the current registered "Production" stage model as baseline.
         # Baseline model is a requirement for relative change and absolute change validation thresholds.
         # TODO: update enable_baseline_comparison
