@@ -26,7 +26,7 @@ resource "databricks_job" "model_training_job" {
 
     new_cluster {
       num_workers   = 3
-      spark_version = "11.0.x-cpu-ml-scala2.12"
+      spark_version = "12.2.x-cpu-ml-scala2.12"
       node_type_id  = "Standard_D3_v2"
       # We set the job cluster to single user mode to enable your training job to access
       # the Unity Catalog.
@@ -72,19 +72,19 @@ resource "databricks_job" "model_training_job" {
         targets = "mean_squared_error"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns custom metrics.
         # TODO(optional): custom_metrics_loader_function
-        custom_metrics_loader_function = "squared_diff_plus_one"
+        custom_metrics_loader_function = "custom_metrics"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns model validation thresholds.
         # TODO(optional): validation_thresholds_loader_function
-        validation_thresholds_loader_function = "mean_squared_error"
+        validation_thresholds_loader_function = "validation_thresholds"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns evaluator_config.
         # TODO(optional): evaluator_config_loader_function
-        # evaluator_config_loader_function = "evaluator_config"
+        evaluator_config_loader_function = "evaluator_config"
       }
     }
 
     new_cluster {
-      num_workers   = 3
-      spark_version = "11.0.x-cpu-ml-scala2.12"
+      num_workers   = 2
+      spark_version = "12.2.x-cpu-ml-scala2.12"
       node_type_id  = "Standard_D3_v2"
       custom_tags   = { "clusterSource" = "mlops-stack/0.0" }
     }
@@ -104,8 +104,8 @@ resource "databricks_job" "model_training_job" {
     }
 
     new_cluster {
-      num_workers   = 3
-      spark_version = "11.0.x-cpu-ml-scala2.12"
+      num_workers   = 1
+      spark_version = "12.2.x-cpu-ml-scala2.12"
       node_type_id  = "Standard_D3_v2"
       custom_tags   = { "clusterSource" = "mlops-stack/0.0" }
     }

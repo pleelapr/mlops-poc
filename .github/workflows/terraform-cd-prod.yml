@@ -36,7 +36,7 @@ jobs:
       - name: AZ Login
         run: |
           az login --service-principal -u ${{ secrets.prodAzureSpApplicationId }} -p ${{ secrets.prodAzureSpClientSecret }} --tenant ${{ secrets.prodAzureSpTenantId }}
-      - uses: hashicorp/setup-terraform@v1
+      - uses: hashicorp/setup-terraform@v2
       - name: Terraform fmt
         id: fmt
         env:

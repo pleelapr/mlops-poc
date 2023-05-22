@@ -1,11 +1,13 @@
 # Databricks ML resource config
+
 [(back to main README)](../../README.md)
 
 ## Table of contents
-* [Intro](#intro)
-* [Prerequisites](#prerequisites)
-* [Deploy initial ML resources](#deploy-initial-ml-resources)
-* [Develop and test config changes](#develop-and-test-config-changes)
+
+- [Intro](#intro)
+- [Prerequisites](#prerequisites)
+- [Deploy initial ML resources](#deploy-initial-ml-resources)
+- [Develop and test config changes](#develop-and-test-config-changes)
 
 ## Intro
 
@@ -26,6 +28,7 @@ which will be unit-tested and then deployed after the PR is merged:
 ## Prerequisites
 
 ### Configure remote state storage and CI/CD
+
 **If you or your ops team have already run the setup scripts under `.mlops-setup-scripts`,
 you can skip this section**
 
@@ -36,11 +39,12 @@ with the appropriate credentials to access remote state.
 #### More detail
 
 To track the state of deployed ML resources with Terraform, you must:
+
 1. Provision a [remote state backend](https://developer.hashicorp.com/terraform/language/settings/backends/configuration) and
-2. Configure Terraform to store state in the remote backend. 
+2. Configure Terraform to store state in the remote backend.
 
 By default, this repo is configured to store resource state in a dedicated
- Azure Blob Storage container ,
+Azure Blob Storage container ,
 defined in `staging/provider.tf` and `prod/provider.tf`. However, the repo does not automatically provision the
 remote state storage location for you, nor does it store credentials in CI/CD for accessing remote state files.
 
@@ -56,17 +60,19 @@ to authenticate to the remote backend. If using the Terraform Cloud backend, mak
 to [execute plans locally](https://www.terraform.io/cloud-docs/workspaces/settings#execution-mode).
 Authentication to Databricks REST APIs will not work if plans are executed remotely.
 
-
 ## Deploy initial ML resources
+
 After completing the prerequisites, create and push a PR branch adding
 the contents of `mlops-poc/terraform` to the Git repo:
+
 ```
 git checkout -b add-ml-resource-config
 git add mlops-poc/terraform
 git commit -m "Add ML resource config"
 git push upstream add-ml-resource-config
 ```
-Open a pull request from the pushed branch. 
+
+Open a pull request from the pushed branch.
 CI will run and comment on the PR with a preview of the resources to be deployed.
 Once CI passes, merge the PR to deploy an initial set of ML resources.
 
@@ -74,6 +80,7 @@ Then, follow the next section to configure the input and output data tables for 
 batch inference job.
 
 ### Setting up batch inference job
+
 The batch inference job expects an input Delta table that with a schema that your registered model accepts. To use the batch
 inference job, set up such a Delta table in both your staging and prod workspace.
 Then, resolve the TODOs in `mlops-poc/terraform/staging/inference-job.tf` and `mlops-poc/terraform/prod/inference-job.tf`, passing
@@ -83,25 +90,28 @@ batch predictions as job parameters.
 As the batch job will be run with the credentials of the service principal that provisioned it, make sure that the service
 principal corresponding to a particular environment has permissions to read the input Delta table and modify the output Delta table in that environment's workspace. If the Delta table is in the [Unity Catalog](https://www.databricks.com/product/unity-catalog), these permissions are
 
-* `USAGE` permissions for the catalog and schema of the input and output table.
-* `SELECT` permission for the input table.
-* `MODIFY` permission for the output table if it pre-dates your job.
+- `USAGE` permissions for the catalog and schema of the input and output table.
+- `SELECT` permission for the input table.
+- `MODIFY` permission for the output table if it pre-dates your job.
 
 ### Setting up model validation
-The model validation stack focuses on building a plug-and-play stack component for continuous deployment (CD) of models 
+
+The model validation stack focuses on building a plug-and-play stack component for continuous deployment (CD) of models
 in staging and prod.
 Its central purpose is to evaluate a registered model and validate its quality before deploying the model to Production/Staging.
 
-Model validation contains three components: 
-* [staging/training-job.tf](./staging/training-job.tf) and [prod/training-job.tf](./prod/training-job.tf) contain resource config and input parameters for model validation.
-* [validation.py](../validation/validation.py) defines custom metrics and validation thresholds that are referenced by above resource config files.
-* [notebooks/ModelValidation](../validation/notebooks/ModelValidation.py) contains the validation job implementation. In most cases you don't need to modify this file.
+Model validation contains three components:
 
-To set up and enable model validation, update [validation.py](../validation/validation.py) to return desired custom metrics and validation thresholds, then 
+- [staging/training-job.tf](./staging/training-job.tf) and [prod/training-job.tf](./prod/training-job.tf) contain resource config and input parameters for model validation.
+- [validation.py](../validation/validation.py) defines custom metrics and validation thresholds that are referenced by above resource config files.
+- [notebooks/ModelValidation](../validation/notebooks/ModelValidation.py) contains the validation job implementation. In most cases you don't need to modify this file.
+
+To set up and enable model validation, update [validation.py](../validation/validation.py) to return desired custom metrics and validation thresholds, then
 resolve the TODOs in [staging/training-job.tf](./staging/training-job.tf) and [prod/training-job.tf](./prod/training-job.tf).
 
 ## Develop and test config changes
-To get started, open `mlops-poc/terraform/staging/inference-job.tf`.  The file contains the ML resource definition of
+
+To get started, open `mlops-poc/terraform/staging/inference-job.tf`. The file contains the ML resource definition of
 a batch inference job, like:
 
 ```$xslt
@@ -110,7 +120,7 @@ resource "databricks_job" "batch_inference_job" {
 
   new_cluster {
     num_workers   = 3
-    spark_version = "11.0.x-cpu-ml-scala2.12"
+    spark_version = "12.2.x-cpu-ml-scala2.12"
     node_type_id  = "Standard_D3_v2"
   }
 
@@ -123,16 +133,16 @@ resource "databricks_job" "batch_inference_job" {
 
 The example above defines a Databricks job with name `staging-mlops-poc-batch-inference-job`
 that runs the notebook under `mlops-poc/deployment/batch_inference/notebooks/BatchInference.py` to regularly apply your ML model
-for batch inference. 
+for batch inference.
 
 At the start of the resource definition, we specify its type (`databricks_job`)
-and assign it the local name ``batch_inference_job``. The local name is a variable
-name that allows referencing the job within the same ``.tf`` file, but has no bearing
+and assign it the local name `batch_inference_job`. The local name is a variable
+name that allows referencing the job within the same `.tf` file, but has no bearing
 on the job's name in Databricks.
 
-To test out a config change, simply edit one of the fields above, e.g. 
-increase cluster size by bumping `num_workers` from 3 to 4. 
-The list of supported fields and additional examples for all Databricks resources can be found in the 
+To test out a config change, simply edit one of the fields above, e.g.
+increase cluster size by bumping `num_workers` from 3 to 4.
+The list of supported fields and additional examples for all Databricks resources can be found in the
 [Databricks Terraform Provider docs](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/job).
 In general, the field names and types match those provided by the Databricks REST API.
 
@@ -144,8 +154,9 @@ In this example, we walked through modifying an attribute of an existing resourc
 size of a job cluster. You can also add or remove resource blocks to create or delete resources.
 
 ### See also
-* [Databricks Terraform Provider docs](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/job) for the supported fields and additional examples for Databricks resources
-* Official docs on [Terraform resource syntax](https://developer.hashicorp.com/terraform/language/resources/syntax#resource-syntax)
+
+- [Databricks Terraform Provider docs](https://registry.terraform.io/providers/databricks/databricks/latest/docs/resources/job) for the supported fields and additional examples for Databricks resources
+- Official docs on [Terraform resource syntax](https://developer.hashicorp.com/terraform/language/resources/syntax#resource-syntax)
 
 ## Deploy config changes
 

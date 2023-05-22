@@ -22,15 +22,15 @@ resource "databricks_job" "write_feature_table_job" {
         input_start_date          = ""
         input_end_date            = ""
         timestamp_column          = "tpep_pickup_datetime"
-        output_table_name         = "feature_store_taxi_example.trip_pickup_features_staging"
+        output_table_name         = "feature_store_taxi_example.trip_pickup_features"
         features_transform_module = "pickup_features"
         primary_keys              = "zip"
       }
     }
 
     new_cluster {
-      num_workers   = 3
-      spark_version = "11.0.x-cpu-ml-scala2.12"
+      num_workers   = 1
+      spark_version = "12.2.x-cpu-ml-scala2.12"
       node_type_id  = "Standard_D3_v2"
       custom_tags   = { "clusterSource" = "mlops-stack/0.0" }
     }
@@ -47,15 +47,15 @@ resource "databricks_job" "write_feature_table_job" {
         input_start_date          = ""
         input_end_date            = ""
         timestamp_column          = "tpep_dropoff_datetime"
-        output_table_name         = "feature_store_taxi_example.trip_dropoff_features_staging"
+        output_table_name         = "feature_store_taxi_example.trip_dropoff_features"
         features_transform_module = "dropoff_features"
         primary_keys              = "zip"
       }
     }
 
     new_cluster {
-      num_workers   = 3
-      spark_version = "11.0.x-cpu-ml-scala2.12"
+      num_workers   = 1
+      spark_version = "12.2.x-cpu-ml-scala2.12"
       node_type_id  = "Standard_D3_v2"
       custom_tags   = { "clusterSource" = "mlops-stack/0.0" }
     }
