@@ -15,4 +15,4 @@ def estimator_fn():
     from sklearn.linear_model import SGDRegressor, LogisticRegression
 
     # return SGDRegressor(random_state=42)
-    return LogisticRegression(penalty='elasticnet', random_state=42)
+    return LogisticRegression(penalty='l2', random_state=42)
