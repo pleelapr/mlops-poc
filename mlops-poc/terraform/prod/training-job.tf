@@ -14,13 +14,14 @@ resource "databricks_job" "model_training_job" {
     task_key = "Train"
 
     notebook_task {
-      notebook_path = "mlops-poc/training/notebooks/TrainWithFeatureStore"
+      # notebook_path = "mlops-poc/training/notebooks/TrainWithFeatureStore"
+      notebook_path = "mlops-poc/training/notebooks/Train"
       base_parameters = {
         env = local.env
         # TODO: Update training_data_path
-        training_data_path = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
-        experiment_name    = databricks_mlflow_experiment.experiment.name
-        model_name         = "${local.env_prefix}mlops-poc-model"
+        # training_data_path = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
+        experiment_name = databricks_mlflow_experiment.experiment.name
+        model_name      = "${local.env_prefix}mlops-poc-model"
       }
     }
 
@@ -45,6 +46,7 @@ resource "databricks_job" "model_training_job" {
     notebook_task {
       notebook_path = "mlops-poc/validation/notebooks/ModelValidation"
       base_parameters = {
+        env             = local.env
         experiment_name = databricks_mlflow_experiment.experiment.name
         # The `run_mode` defines whether model validation is enabled or not.
         # It can be one of the three values:
@@ -62,14 +64,6 @@ resource "databricks_job" "model_training_job" {
         # Please refer to data parameter in mlflow.evaluate documentation https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
         # TODO: update validation_input
         validation_input = "SELECT * FROM delta.`dbfs:/databricks-datasets/nyctaxi-with-zipcodes/subsampled`"
-        # A string describing the model type. The model type can be either "regressor" and "classifier".
-        # Please refer to model_type parameter in mlflow.evaluate documentation https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
-        # TODO: update model_type
-        model_type = "regressor"
-        # The string name of a column from data that contains evaluation labels.
-        # Please refer to targets parameter in mlflow.evaluate documentation https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
-        # TODO: targets
-        targets = "mean_squared_error"
         # Specifies the name of the function in mlops-poc/validation/validation.py that returns custom metrics.
         # TODO(optional): custom_metrics_loader_function
         custom_metrics_loader_function = "custom_metrics"

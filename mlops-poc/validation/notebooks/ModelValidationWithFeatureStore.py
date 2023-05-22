@@ -20,7 +20,10 @@
 # * enable_baseline_comparison              - Whether to load the current registered "Production" stage model as baseline.
 #                                             Baseline model is a requirement for relative change and absolute change validation thresholds.
 # * validation_input                        - Validation input. Please refer to data parameter in mlflow.evaluate documentation https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
-
+# * model_type                              - A string describing the model type. The model type can be either "regressor" and "classifier".
+#                                             Please refer to model_type parameter in mlflow.evaluate documentation https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
+# * targets                                 - The string name of a column from data that contains evaluation labels.
+#                                             Please refer to targets parameter in mlflow.evaluate documentation https://mlflow.org/docs/latest/python_api/mlflow.html#mlflow.evaluate
 # * custom_metrics_loader_function          - Specifies the name of the function in mlops-poc/validation/validation.py that returns custom metrics.
 # * validation_thresholds_loader_function   - Specifies the name of the function in mlops-poc/validation/validation.py that returns model validation thresholds.
 #
@@ -40,9 +43,7 @@
 
 # COMMAND ----------
 
-dbutils.widgets.dropdown(
-    "env", "prod", ["staging", "prod"], "Environment(for input data)"
-)
+
 dbutils.widgets.text(
     "experiment_name",
     "/dev-mlops-poc-experiment",
@@ -52,6 +53,8 @@ dbutils.widgets.dropdown("run_mode", "disabled", ["disabled", "dry_run", "enable
 dbutils.widgets.dropdown("enable_baseline_comparison", "false", ["true", "false"], "Enable Baseline Comparison")
 dbutils.widgets.text("validation_input", "", "Validation Input")
 
+dbutils.widgets.text("model_type", "", "Model Type")
+dbutils.widgets.text("targets", "", "Targets")
 dbutils.widgets.text("custom_metrics_loader_function", "custom_metrics", "Custom Metrics Loader Function")
 dbutils.widgets.text("validation_thresholds_loader_function", "validation_thresholds", "Validation Thresholds Loader Function")
 dbutils.widgets.text("evaluator_config_loader_function", "evaluator_config", "Evaluator Config Loader Function")
@@ -61,6 +64,11 @@ dbutils.widgets.text("model_version", "", "Candidate Model Version")
 # COMMAND ----------
 
 
+# print(
+#     "Currently model validation is not supported for models registered with feature store. Please refer to "
+#     "issue https://github.com/databricks/mlops-stack/issues/70 for more details."
+# )
+# dbutils.notebook.exit(0)
 
 import sys
 
@@ -93,41 +101,14 @@ import mlflow
 import os
 import tempfile
 import traceback
-from mlflow.recipes.utils import (
-    get_recipe_config,
-    get_recipe_name,
-    get_recipe_root_path,
-)
+
 from mlflow.tracking.client import MlflowClient
 
 client = MlflowClient()
 
 experiment_name = dbutils.widgets.get("experiment_name")
 
-env = dbutils.widgets.get("env")
-assert env, "env notebook parameter must be specified"
 
-def get_model_type_from_recipe():
-    try:
-        recipe_config = get_recipe_config("../../training", f"databricks-{env}")
-        problem_type = recipe_config.get("recipe").split("/")[0]
-        if problem_type.lower() == "regression":
-            return "regressor"
-        elif problem_type.lower() == "classification":
-            return "classifier"
-        else:
-            raise Exception(f"Unsupported recipe {recipe_config}")
-    except Exception as ex:
-        print(f"Not able to get model type from mlflow recipe databricks-{env}.")
-        raise ex
-
-def get_targets_from_recipe():
-    try:
-        recipe_config = get_recipe_config("../../training", f"databricks-{env}")
-        return recipe_config.get("target_col")
-    except Exception as ex:
-        print(f"Not able to get targets from mlflow recipe databricks-{env}.")
-        raise ex
 
 
 # set model evaluation parameters that can be inferred from the job
@@ -161,8 +142,9 @@ validation_input = dbutils.widgets.get("validation_input")
 assert validation_input
 data = spark.sql(validation_input)
 
-model_type = get_model_type_from_recipe()
-targets = get_targets_from_recipe()
+model_type = dbutils.widgets.get("model_type")
+targets = dbutils.widgets.get("targets")
+
 assert model_type
 assert targets
 

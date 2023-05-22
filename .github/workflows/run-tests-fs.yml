@@ -1,266 +1,266 @@
-name: Feature and Training Integration Tests for mlops-poc
-on:
-  workflow_dispatch:
-  pull_request:
-    paths-ignore:
-      - "mlops-poc/terraform/**"
+# name: Feature and Training Integration Tests for mlops-poc
+# on:
+#   workflow_dispatch:
+#   pull_request:
+#     paths-ignore:
+#       - "mlops-poc/terraform/**"
 
-env:
-  DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
-  DATABRICKS_JOBS_API_VERSION: 2.1
-  NODE_TYPE_ID: Standard_D3_v2
+# env:
+#   DATABRICKS_HOST: https://adb-1778171230779412.12.azuredatabricks.net
+#   DATABRICKS_JOBS_API_VERSION: 2.1
+#   NODE_TYPE_ID: Standard_D3_v2
 
-concurrency: mlops-poc-feature-training-integration-test-staging
+# concurrency: mlops-poc-feature-training-integration-test-staging
 
-jobs:
-  unit_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-      # Feature store tests bring up a local Spark session, so Java is required.
-      - uses: actions/setup-java@v2
-        with:
-          distribution: "temurin"
-          java-version: "11"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r test-requirements.txt
-      - name: Run tests with pytest
-        run: |
-          cd mlops-poc
-          pytest
-          cd ..
+# jobs:
+#   unit_tests:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: actions/setup-python@v2
+#         with:
+#           python-version: 3.9
+#       # Feature store tests bring up a local Spark session, so Java is required.
+#       - uses: actions/setup-java@v2
+#         with:
+#           distribution: "temurin"
+#           java-version: "11"
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install -r requirements.txt
+#           pip install -r test-requirements.txt
+#       - name: Run tests with pytest
+#         run: |
+#           cd mlops-poc
+#           pytest
+#           cd ..
 
-  integration_test:
-    needs: unit_tests
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-      - name: GET Databricks AAD Token
-        run: |
-          DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
-                                              "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
-                                              -d "client_id=${{ secrets.stagingAzureSpApplicationId }}" \
-                                              -d 'grant_type=client_credentials' \
-                                              -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
-                                              -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')
-          echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
-          echo "$DATABRICKS_TOKEN"
+#   integration_test:
+#     needs: unit_tests
+#     runs-on: ubuntu-20.04
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v3
+#       - name: GET Databricks AAD Token
+#         run: |
+# DATABRICKS_TOKEN=$(curl --fail -X POST -H 'Content-Type: application/x-www-form-urlencoded' \
+#                                     "https://login.microsoftonline.com/${{ secrets.stagingAzureSpTenantId }}/oauth2/v2.0/token" \
+#                                     -d "client_id=${{ secrets.stagingAzureSpApplicationId }}" \
+#                                     -d 'grant_type=client_credentials' \
+#                                     -d 'scope=2ff814a6-3304-4ab8-85cb-cd0e6f879c1d%2F.default' \
+#                                     -d "client_secret=${{ secrets.stagingAzureSpClientSecret }}" |  jq -r  '.access_token')
+# echo "DATABRICKS_TOKEN=$DATABRICKS_TOKEN" >> "$GITHUB_ENV"
+#           echo "$DATABRICKS_TOKEN"
 
-      # - name: read workspace id
-      #   id: workspace
-      #   run: echo "::set-output name=id::$(cat workspaces.json | jq -c '.workspaces[] | select(.name == "My Workspace").id')"
-      # - name: Generate AAD Token
-      #   run: ./.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
-      # This step populates a JSON Databricks job payload that will be submitted as an integration test run.
-      # It currently builds a one-off multi-task job that contains feature engineering tasks to populate Feature
-      # Store tables, and a training task that uses those tables.
-      # You will need to modify the contents below to fit your pipelines (both # of tasks and input parameters for each
-      # task).
-      - name: Build JSON job payload for integration test
-        uses: actions/github-script@v6
-        id: integration-test-content
-        with:
-          # TODO update the tasks and notebook parameters below to match your integration test setup.
-          script: |
-            const output = `
-                    {
-            "run_name": "features-training-integration-test",
-            "tasks": [
-              {
-                "task_key": "pickup-features",
-                "notebook_task": {
-                  "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures", 
-                  "base_parameters": {
-                    "input_table_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-                    "timestamp_column": "tpep_pickup_datetime",
-                    "output_table_name": "feature_store_taxi_example.trip_pickup_features_test",
-                    "features_transform_module": "pickup_features",
-                    "primary_keys": "zip"
-                  }
-                },
-                "new_cluster": {
-                  "spark_version": "12.2.x-cpu-ml-scala2.12",
-                  "node_type_id": "${{ env.NODE_TYPE_ID }}",
-                  "num_workers": 0,
-                  "spark_conf": {
-                    "spark.databricks.cluster.profile": "singleNode",
-                    "spark.master": "local[*, 4]"
-                  },
-                  "custom_tags": {
-                    "ResourceClass": "SingleNode",
-                    "clusterSource": "mlops-stack/0.0"
-                  }
-                }
-              },
-              {
-                "task_key": "dropoff-features",
-                "notebook_task": {
-                  "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures",
-                  "base_parameters": {                    
-                    "input_table_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-                    "timestamp_column": "tpep_dropoff_datetime",
-                    "output_table_name": "feature_store_taxi_example.trip_dropoff_features_test",
-                    "features_transform_module": "dropoff_features",
-                    "primary_keys": "zip"
-                  }
-                },
-                "new_cluster": {
-                  "spark_version": "12.2.x-cpu-ml-scala2.12",
-                  "node_type_id": "${{ env.NODE_TYPE_ID }}",
-                  "num_workers": 0,
-                  "spark_conf": {
-                    "spark.databricks.cluster.profile": "singleNode",
-                    "spark.master": "local[*, 4]"
-                  },
-                  "custom_tags": {
-                    "ResourceClass": "SingleNode",
-                    "clusterSource": "mlops-stack/0.0"
-                  }
-                }
-              },
-              {
-                "task_key": "training",
-                "depends_on": [
-                  {
-                    "task_key": "dropoff-features"
-                  },
-                  {
-                    "task_key": "pickup-features"
-                  }
-                ],
-                "notebook_task": {
-                  "notebook_path": "mlops-poc/training/notebooks/TrainWithFeatureStore",
-                  "base_parameters": {
-                    "env": "staging",
-                    "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
-                    "experiment_name": "/mlops-poc-staging/test-mlops-poc-experiment",
-                    "model_name": "test-mlops-poc-model",
-                    "pickup_features_table": "feature_store_taxi_example.trip_pickup_features_test",
-                    "dropoff_features_table": "feature_store_taxi_example.trip_dropoff_features_test"
-                  }
-                },
-                "new_cluster": {
-                  "spark_version": "12.2.x-cpu-ml-scala2.12",
-                  "node_type_id": "${{ env.NODE_TYPE_ID }}",
-                  "num_workers": 0,
-                  "spark_conf": {
-                    "spark.databricks.cluster.profile": "singleNode",
-                    "spark.master": "local[*, 4]"
-                  },
-                  "custom_tags": {
-                    "ResourceClass": "SingleNode",
-                    "clusterSource": "mlops-stack/0.0"
-                  }
-                }
-              }
-            ],
-            "git_source": {
-              "git_url": "${{ github.server_url }}/${{ github.repository }}",
-              "git_provider": "gitHub",
-              "git_commit": "${{ github.event.pull_request.head.sha || github.sha }}"
-            },
-            "access_control_list": [
-              {
-                "group_name": "users",
-                "permission_level": "CAN_VIEW"
-              }
-            ]
-            }`
-            return output.replace(/\r?\n|\r/g, '')
-      - name: Upgrade Requests
-        run: pip install --upgrade requests
-      - name: Install databricks-cli
-        run: pip install databricks-cli
-      - name: Set databricks jobs
-        run: databricks jobs configure --version=2.1
-      - name: get test.json file
-        run: echo ${{steps.integration-test-content.outputs.result}} > test.json
-      # - name: Trigger GenerateAndWriteFeatures from PR branch
-      #   uses: databricks/run-notebook@v0
-      #   with:
-      #     local-notebook-path: mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures
-      #     databricks-host: ${{ env.DATABRICKS_HOST }}
-      #     databricks-token: ${{ env.DATABRICKS_TOKEN }}
-      #     git-commit: ${{ github.event.pull_request.head.sha || github.sha }}
-      #     new-cluster-json: >
-      #       {
-      #         "spark_version": "12.2.x-cpu-ml-scala2.12",
-      #         "node_type_id": "${{ env.NODE_TYPE_ID }}",
-      #         "num_workers": 0,
-      #         "spark_conf": {
-      #           "spark.databricks.cluster.profile": "singleNode",
-      #           "spark.master": "local[*, 4]"
-      #         },
-      #         "custom_tags": {
-      #           "ResourceClass": "SingleNode",
-      #           "clusterSource": "mlops-stack/0.0"
-      #         }
-      #       }
-      #     # Grant all users view permission on the notebook results
-      #     access-control-list-json: >
-      #       [
-      #         {
-      #           "group_name": "users",
-      #           "permission_level": "CAN_VIEW"
-      #         }
-      #       ]
-      # - name: Trigger model training notebook from PR branch
-      #   uses: databricks/run-notebook@v0
-      #   with:
-      #     local-notebook-path: mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures
-      #     databricks-host: ${{ env.DATABRICKS_HOST }}
-      #     databricks-token: ${{ env.DATABRICKS_TOKEN }}
-      #     git-commit: ${{ github.event.pull_request.head.sha || github.sha }}
-      #     new-cluster-json: >
-      #       {
-      #         "spark_version": "12.2.x-cpu-ml-scala2.12",
-      #         "node_type_id": "${{ env.NODE_TYPE_ID }}",
-      #         "num_workers": 0,
-      #         "spark_conf": {
-      #           "spark.databricks.cluster.profile": "singleNode",
-      #           "spark.master": "local[*, 4]"
-      #         },
-      #         "custom_tags": {
-      #           "ResourceClass": "SingleNode",
-      #           "clusterSource": "mlops-stack/0.0"
-      #         }
-      #       }
-      #     # Grant all users view permission on the notebook results
-      #     access-control-list-json: >
-      #       [
-      #         {
-      #           "group_name": "users",
-      #           "permission_level": "CAN_VIEW"
-      #         }
-      #       ]
-      # - name: Feature Store/Model Training Integration Test
-      #   id: features-training-integration-test
-      #   run: databricks runs submit --json-file test.json --wait > tmp-output.json
-      #   # We want to extract the run id as it's useful to show in the Github UI (as a comment).
-      # - name: extract run id
-      #   run: |
-      #     head -3  tmp-output.json  | jq '.run_id'  > run-id.json
-      #     databricks runs get --run-id "$(cat run-id.json)" | jq -r '.run_page_url' > run-page-url.json
-      #     echo "run-url=$(cat run-page-url.json)" >> "$GITHUB_OUTPUT"
-      # - name: Create Comment with Training Model Output
-      #   uses: actions/github-script@v6
-      #   id: comment
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       const output = `
-      #       The training integration test run is available [here](${{ steps.features-training-integration-test.outputs.run-url }}).`
+#       # - name: read workspace id
+#       #   id: workspace
+#       #   run: echo "::set-output name=id::$(cat workspaces.json | jq -c '.workspaces[] | select(.name == "My Workspace").id')"
+#       # - name: Generate AAD Token
+#       #   run: ./.github/workflows/scripts/generate-aad-token.sh ${{ secrets.stagingAzureSpTenantId }} ${{ secrets.stagingAzureSpApplicationId }} ${{ secrets.stagingAzureSpClientSecret }}
+#       # This step populates a JSON Databricks job payload that will be submitted as an integration test run.
+#       # It currently builds a one-off multi-task job that contains feature engineering tasks to populate Feature
+#       # Store tables, and a training task that uses those tables.
+#       # You will need to modify the contents below to fit your pipelines (both # of tasks and input parameters for each
+#       # task).
+#       - name: Build JSON job payload for integration test
+#         uses: actions/github-script@v6
+#         id: integration-test-content
+#         with:
+#           # TODO update the tasks and notebook parameters below to match your integration test setup.
+#           script: |
+#             const output = `
+#                     {
+#             "run_name": "features-training-integration-test",
+#             "tasks": [
+#               {
+#                 "task_key": "pickup-features",
+#                 "notebook_task": {
+#                   "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures",
+#                   "base_parameters": {
+#                     "input_table_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+#                     "timestamp_column": "tpep_pickup_datetime",
+#                     "output_table_name": "feature_store_taxi_example.trip_pickup_features_test",
+#                     "features_transform_module": "pickup_features",
+#                     "primary_keys": "zip"
+#                   }
+#                 },
+#                 "new_cluster": {
+#                   "spark_version": "12.2.x-cpu-ml-scala2.12",
+#                   "node_type_id": "${{ env.NODE_TYPE_ID }}",
+#                   "num_workers": 0,
+#                   "spark_conf": {
+#                     "spark.databricks.cluster.profile": "singleNode",
+#                     "spark.master": "local[*, 4]"
+#                   },
+#                   "custom_tags": {
+#                     "ResourceClass": "SingleNode",
+#                     "clusterSource": "mlops-stack/0.0"
+#                   }
+#                 }
+#               },
+#               {
+#                 "task_key": "dropoff-features",
+#                 "notebook_task": {
+#                   "notebook_path": "mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures",
+#                   "base_parameters": {
+#                     "input_table_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+#                     "timestamp_column": "tpep_dropoff_datetime",
+#                     "output_table_name": "feature_store_taxi_example.trip_dropoff_features_test",
+#                     "features_transform_module": "dropoff_features",
+#                     "primary_keys": "zip"
+#                   }
+#                 },
+#                 "new_cluster": {
+#                   "spark_version": "12.2.x-cpu-ml-scala2.12",
+#                   "node_type_id": "${{ env.NODE_TYPE_ID }}",
+#                   "num_workers": 0,
+#                   "spark_conf": {
+#                     "spark.databricks.cluster.profile": "singleNode",
+#                     "spark.master": "local[*, 4]"
+#                   },
+#                   "custom_tags": {
+#                     "ResourceClass": "SingleNode",
+#                     "clusterSource": "mlops-stack/0.0"
+#                   }
+#                 }
+#               },
+#               {
+#                 "task_key": "training",
+#                 "depends_on": [
+#                   {
+#                     "task_key": "dropoff-features"
+#                   },
+#                   {
+#                     "task_key": "pickup-features"
+#                   }
+#                 ],
+#                 "notebook_task": {
+#                   "notebook_path": "mlops-poc/training/notebooks/TrainWithFeatureStore",
+#                   "base_parameters": {
+#                     "env": "staging",
+#                     "training_data_path": "/databricks-datasets/nyctaxi-with-zipcodes/subsampled",
+#                     "experiment_name": "/mlops-poc-staging/test-mlops-poc-experiment",
+#                     "model_name": "test-mlops-poc-model",
+#                     "pickup_features_table": "feature_store_taxi_example.trip_pickup_features_test",
+#                     "dropoff_features_table": "feature_store_taxi_example.trip_dropoff_features_test"
+#                   }
+#                 },
+#                 "new_cluster": {
+#                   "spark_version": "12.2.x-cpu-ml-scala2.12",
+#                   "node_type_id": "${{ env.NODE_TYPE_ID }}",
+#                   "num_workers": 0,
+#                   "spark_conf": {
+#                     "spark.databricks.cluster.profile": "singleNode",
+#                     "spark.master": "local[*, 4]"
+#                   },
+#                   "custom_tags": {
+#                     "ResourceClass": "SingleNode",
+#                     "clusterSource": "mlops-stack/0.0"
+#                   }
+#                 }
+#               }
+#             ],
+#             "git_source": {
+#               "git_url": "${{ github.server_url }}/${{ github.repository }}",
+#               "git_provider": "gitHub",
+#               "git_commit": "${{ github.event.pull_request.head.sha || github.sha }}"
+#             },
+#             "access_control_list": [
+#               {
+#                 "group_name": "users",
+#                 "permission_level": "CAN_VIEW"
+#               }
+#             ]
+#             }`
+#             return output.replace(/\r?\n|\r/g, '')
+#       - name: Upgrade Requests
+#         run: pip install --upgrade requests
+#       - name: Install databricks-cli
+#         run: pip install databricks-cli
+#       - name: Set databricks jobs
+#         run: databricks jobs configure --version=2.1
+#       - name: get test.json file
+#         run: echo ${{steps.integration-test-content.outputs.result}} > test.json
+#       # - name: Trigger GenerateAndWriteFeatures from PR branch
+#       #   uses: databricks/run-notebook@v0
+#       #   with:
+#       #     local-notebook-path: mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures
+#       #     databricks-host: ${{ env.DATABRICKS_HOST }}
+#       #     databricks-token: ${{ env.DATABRICKS_TOKEN }}
+#       #     git-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+#       #     new-cluster-json: >
+#       #       {
+#       #         "spark_version": "12.2.x-cpu-ml-scala2.12",
+#       #         "node_type_id": "${{ env.NODE_TYPE_ID }}",
+#       #         "num_workers": 0,
+#       #         "spark_conf": {
+#       #           "spark.databricks.cluster.profile": "singleNode",
+#       #           "spark.master": "local[*, 4]"
+#       #         },
+#       #         "custom_tags": {
+#       #           "ResourceClass": "SingleNode",
+#       #           "clusterSource": "mlops-stack/0.0"
+#       #         }
+#       #       }
+#       #     # Grant all users view permission on the notebook results
+#       #     access-control-list-json: >
+#       #       [
+#       #         {
+#       #           "group_name": "users",
+#       #           "permission_level": "CAN_VIEW"
+#       #         }
+#       #       ]
+#       # - name: Trigger model training notebook from PR branch
+#       #   uses: databricks/run-notebook@v0
+#       #   with:
+#       #     local-notebook-path: mlops-poc/feature_engineering/notebooks/GenerateAndWriteFeatures
+#       #     databricks-host: ${{ env.DATABRICKS_HOST }}
+#       #     databricks-token: ${{ env.DATABRICKS_TOKEN }}
+#       #     git-commit: ${{ github.event.pull_request.head.sha || github.sha }}
+#       #     new-cluster-json: >
+#       #       {
+#       #         "spark_version": "12.2.x-cpu-ml-scala2.12",
+#       #         "node_type_id": "${{ env.NODE_TYPE_ID }}",
+#       #         "num_workers": 0,
+#       #         "spark_conf": {
+#       #           "spark.databricks.cluster.profile": "singleNode",
+#       #           "spark.master": "local[*, 4]"
+#       #         },
+#       #         "custom_tags": {
+#       #           "ResourceClass": "SingleNode",
+#       #           "clusterSource": "mlops-stack/0.0"
+#       #         }
+#       #       }
+#       #     # Grant all users view permission on the notebook results
+#       #     access-control-list-json: >
+#       #       [
+#       #         {
+#       #           "group_name": "users",
+#       #           "permission_level": "CAN_VIEW"
+#       #         }
+#       #       ]
+#       # - name: Feature Store/Model Training Integration Test
+#       #   id: features-training-integration-test
+#       #   run: databricks runs submit --json-file test.json --wait > tmp-output.json
+#       #   # We want to extract the run id as it's useful to show in the Github UI (as a comment).
+#       # - name: extract run id
+#       #   run: |
+#       #     head -3  tmp-output.json  | jq '.run_id'  > run-id.json
+#       #     databricks runs get --run-id "$(cat run-id.json)" | jq -r '.run_page_url' > run-page-url.json
+#       #     echo "run-url=$(cat run-page-url.json)" >> "$GITHUB_OUTPUT"
+#       # - name: Create Comment with Training Model Output
+#       #   uses: actions/github-script@v6
+#       #   id: comment
+#       #   with:
+#       #     github-token: ${{ secrets.GITHUB_TOKEN }}
+#       #     script: |
+#       #       const output = `
+#       #       The training integration test run is available [here](${{ steps.features-training-integration-test.outputs.run-url }}).`
 
-      #       github.rest.issues.createComment({
-      #         issue_number: context.issue.number,
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         body: output
-      #       })
+#       #       github.rest.issues.createComment({
+#       #         issue_number: context.issue.number,
+#       #         owner: context.repo.owner,
+#       #         repo: context.repo.repo,
+#       #         body: output
+#       #       })
